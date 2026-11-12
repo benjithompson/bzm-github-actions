@@ -1,0 +1,22 @@
+name: Deploy blaze-wftest to OpenShift CRC
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'deployments/blazemeter/OpenShift_WF_Functional/merging_wf_manifests/**'
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, openshift]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Apply OpenShift Configuration
+        shell: powershell
+        working-directory: deployments/blazemeter/OpenShift_WF_Functional/merging_wf_manifests
+        run: |
+          wsl chmod +x deploy.sh
+          wsl bash deploy.sh
+

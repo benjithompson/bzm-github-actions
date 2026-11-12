@@ -1,0 +1,20 @@
+services:
+  - module: shellexec
+    post-process:
+      - command: echo "Removing csv file from test."
+      - command: rm dummyusers.csv
+
+execution: 
+- concurrency: 1
+  ramp-up: 1m 
+  hold-for: 2m 
+  scenario: simple1
+  # locations:
+  #   harbor-680bcf0631617b81530b7e14: 1
+  # locations-weighted: false
+  
+scenarios:
+  simple1:
+    script: dummy_data_with_errors.jmx
+    data-sources:
+    - dummyusers.csv

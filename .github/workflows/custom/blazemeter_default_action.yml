@@ -1,0 +1,91 @@
+name: BlazeMeter Default Performance Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate JMX File
+        run: |
+          if [ ! -f JMeter/DummySampler/dummy_data_with_errors.jmx ]; then
+            echo "File 'dummy_data_with_errors.jmx' not found."
+            exit 1
+          fi
+
+      - name: Validate CSV File
+        run: |
+          if [ ! -f JMeter/DummySampler/dummyusers.csv ]; then
+            echo "File 'dummyusers.csv' not found."
+            exit 1
+          fi
+
+      - name: BlazeRunnerAction
+        uses: Blazemeter/github-action@v8.5
+        with:
+          # API Key
+          apiKey: ${{ secrets.BZM_API_KEY }}
+          # API Secret
+          apiSecret: ${{ secrets.BZM_API_SECRET }}
+          # Test ID
+          #testID: '14752782'
+          # Test name for creating new test (optional)
+          testName: 'Github Actions - Dummy Data'
+          # Project ID (optional)
+          projectID: '2507550'
+          # Start file for create test (optional)
+          inputStartFile: 'JMeter/DummySampler/dummy_data_with_errors.jmx'
+          # Create test flag (optional)
+          createTest: 'true'
+          # Total users (optional)
+          # totalUsers: '2'
+          # # Duration in minutes (optional)
+          # duration: '2'
+          # # Ramp-up time in minutes (optional)
+          # rampUp: '1'
+          # Upload file flag (optional)
+          uploadFileCheck: 'true'
+          # Continue pipeline on failure (optional)
+          continuePipeline: 'false'
+          # Multi-tests flag (optional)
+          multiTests: 'false'
+          # Functional test flag (optional)
+          functionalTest: 'false'
+          # Data to be updated (JSON string, optional)
+          modelData: '{}'
+          # Env variables (JSON string, optional)
+          envVariable: '{}'
+          # Show tail of log (optional)
+          showTailLog: 'true'
+          # JMeter properties file (optional)
+          jmeterProperties: ''
+          # Report name (optional)
+          # reportName: ''
+          # Notes (optional)
+          notes: ''
+          # Iterations config flag (optional)
+          iterationsConfig: 'false'
+          # Number of iterations (optional)
+          #iterations: '1'
+          # Upload dependency files (optional)
+          inputAllFiles: 'JMeter/DummySampler/dummyusers.csv'
+          # Run by test name flag (optional)
+          testRunByTestName: 'false'
+          # Ignore SLA flag (optional)
+          ignoreSLA: 'false'
+          # Azure Teams webhook URL (optional)
+          webhookURL: ''
+          # Enable public report URL (optional)
+          enablePublicReportURL: 'false'
+          # Slack webhook URL (optional)
+          webhookURLSlack: ''
+          # Locations (comma-separated, optional)
+          #locations: ''
+          # Use dedicated IP flag (optional)
+          dedicatedIP: 'false'

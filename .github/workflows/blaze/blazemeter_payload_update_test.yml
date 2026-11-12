@@ -1,0 +1,86 @@
+name: 'BlazeMeter Load Configuration Update Test'
+# Test version of the BlazeMeter load configuration update workflow
+# Uses placeholder values for testing the action structure
+# Replace with real values when ready to test with actual BlazeMeter API
+
+on:
+  workflow_dispatch:
+    inputs:
+      concurrency:
+        description: 'Number of virtual users'
+        required: true
+        default: '10'
+        type: string
+      duration:
+        description: 'Test duration (e.g., 10m, 600s)'
+        required: true
+        default: '10m'
+        type: string
+      rampup:
+        description: 'Ramp-up time (e.g., 2m, 120s)'
+        required: true
+        default: '2m'
+        type: string
+
+env:
+  PROJECT_ID: '2512298'
+  # For testing - replace these with actual values or use repository secrets/variables
+  BZM_TEST_ID: 'test-id-placeholder'
+  BZM_API_KEY: 'test-api-key-placeholder'
+  BZM_API_SECRET: 'test-api-secret-placeholder'
+
+jobs:
+  test-action-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Debug step: Check environment variables
+      - name: Debug Environment Variables
+        run: |
+          echo "=============================================================="
+          echo "🔍 DEBUGGING ENVIRONMENT VARIABLES"
+          echo "=============================================================="
+          echo "PROJECT_ID: ${{ env.PROJECT_ID }}"
+          echo "BZM_TEST_ID: ${{ env.BZM_TEST_ID }}"
+          echo "BZM_API_KEY exists: ${{ env.BZM_API_KEY != '' }}"
+          echo "BZM_API_SECRET exists: ${{ env.BZM_API_SECRET != '' }}"
+          echo "Concurrency: ${{ github.event.inputs.concurrency }}"
+          echo "Duration: ${{ github.event.inputs.duration }}"
+          echo "Ramp-up: ${{ github.event.inputs.rampup }}"
+          echo "=============================================================="
+
+      # Test the action (will fail with placeholder values but should show debug info)
+      - name: Test BlazeMeter Load Configuration Action
+        id: test-config
+        continue-on-error: true
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'blazemeter-update-load-configuration'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-test-id: ${{ env.BZM_TEST_ID }}
+          bzm-concurrency: ${{ github.event.inputs.concurrency }}
+          bzm-duration: ${{ github.event.inputs.duration }}
+          bzm-rampup: ${{ github.event.inputs.rampup }}
+          debug: 'true'
+
+      # Show results
+      - name: Display Test Results
+        run: |
+          echo "=============================================================="
+          echo "🧪 TEST RESULTS"
+          echo "=============================================================="
+          echo "Action Status: ${{ steps.test-config.outcome }}"
+          echo "Operation Status: ${{ steps.test-config.outputs.operation-status }}"
+          echo ""
+          echo "NOTE: This test uses placeholder values and is expected to fail"
+          echo "with actual BlazeMeter API calls. The purpose is to validate"
+          echo "that the action structure is working correctly."
+          echo ""
+          echo "To run with real data:"
+          echo "1. Configure repository secrets: BZM_API_KEY, BZM_API_SECRET"
+          echo "2. Configure repository variable: BZM_TEST_ID"
+          echo "3. Use the main workflow: blazemeter_payload_update_example.yml"
+          echo "=============================================================="

@@ -1,0 +1,66 @@
+# https://github.com/Blazemeter/github-action
+#
+# Starts the "GitHub Actions - Dummy Sampler (Run 2)" BlazeMeter test and gates
+# the job on the test's failure criteria. The test already has the JMX + CSV
+# from JMeter/DummySampler attached; this workflow only starts it.
+#
+# BlazeMeter test: "GitHub Actions - Dummy Sampler (Run 2)"
+#   test    15801364
+#   project 2512298  (Demo)
+#   ws      2194183  (Ben T)
+#   account 291446   (BlazeMeter SE Demo)
+
+name: BlazeMeter - Dummy Sampler Run 2
+
+on:
+  workflow_dispatch:
+    inputs:
+      totalUsers:
+        description: 'Concurrent virtual users'
+        default: '10'
+        required: true
+      duration:
+        description: 'Hold-for duration (minutes)'
+        default: '3'
+        required: true
+      rampUp:
+        description: 'Ramp-up (minutes)'
+        default: '1'
+        required: true
+
+env:
+  BZM_TEST_ID: '15801364'
+  BZM_PROJECT_ID: '2512298'
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run BlazeMeter test
+        uses: Blazemeter/github-action@v8
+        with:
+          apiKey: ${{ secrets.BZM_API_KEY }}
+          apiSecret: ${{ secrets.BZM_API_SECRET }}
+          projectID: ${{ env.BZM_PROJECT_ID }}
+          testID: ${{ env.BZM_TEST_ID }}
+          totalUsers: ${{ github.event.inputs.totalUsers || '10' }}
+          duration: ${{ github.event.inputs.duration || '3' }}
+          rampUp: ${{ github.event.inputs.rampUp || '1' }}
+          showTailLog: 'true'
+          # false => job fails when the test breaches its failure criteria
+          continuePipeline: 'false'
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### BlazeMeter run"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Test | \`${BZM_TEST_ID}\` — GitHub Actions - Dummy Sampler (Run 2) |"
+            echo "| Project | Demo (\`${BZM_PROJECT_ID}\`) |"
+            echo "| Result | ${{ job.status }} |"
+            echo ""
+            echo "Gate: error rate > 50%, avg response time > 1000 ms, or P95 > 1500 ms."
+          } >> "$GITHUB_STEP_SUMMARY"

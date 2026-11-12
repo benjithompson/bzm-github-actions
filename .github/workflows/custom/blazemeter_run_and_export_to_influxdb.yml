@@ -1,0 +1,125 @@
+# https://github.com/Blazemeter/github-action
+# Runs a BlazeMeter test and exports results to InfluxDB for Grafana visualization
+
+name: BlazeMeter Test with InfluxDB Export
+
+on:
+  workflow_dispatch:
+    inputs:
+      testId:
+        description: 'The ID of the BlazeMeter test to run'
+        required: true
+      projectId:
+        description: 'The ID of the BlazeMeter project'
+        required: true
+      totalUsers:
+        description: 'The total number of users for the test (optional)'
+        required: false
+      duration:
+        description: 'The duration of the test in minutes (optional)'
+        required: false
+      rampUp:
+        description: 'The ramp-up time in minutes (optional)'
+        required: false
+
+env:
+  INFLUXDB_URL: "http://192.168.29.208:8086"
+  INFLUXDB_BUCKET: "blazemeter"
+  INFLUXDB_ORG: "blazemeter"
+
+jobs:
+  blazemeter-test-and-export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run BlazeMeter Test
+        id: blazemeter
+        uses: Blazemeter/github-action@v8
+        with:
+          apiKey: ${{ secrets.BZM_API_KEY }}
+          apiSecret: ${{ secrets.BZM_API_SECRET }}
+          projectId: ${{ inputs.projectId }}
+          testId: ${{ inputs.testId }}
+          totalUsers: ${{ inputs.totalUsers }}
+          duration: ${{ inputs.duration }}
+          rampUp: ${{ inputs.rampUp }}
+          continuePipeline: 'false'
+
+      - name: Get Master ID from BlazeMeter
+        id: get_master_id
+        run: |
+          echo "Fetching latest execution for test ${{ inputs.testId }}..."
+          
+          # Get the most recent master (execution) for this test
+          RESPONSE=$(curl -s \
+            -u "${{ secrets.BZM_API_KEY }}:${{ secrets.BZM_API_SECRET }}" \
+            "https://a.blazemeter.com/api/v4/tests/${{ inputs.testId }}/masters?limit=1")
+          
+          MASTER_ID=$(echo "$RESPONSE" | jq -r '.result[0].id // empty')
+          
+          if [ -z "$MASTER_ID" ]; then
+            echo "Error: Could not find master ID for test"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
+          
+          echo "Master ID: $MASTER_ID"
+          echo "master_id=$MASTER_ID" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install InfluxDB Connector Dependencies
+        run: |
+          cd influxdb
+          pip install -r requirements.txt
+
+      - name: Export Results to InfluxDB
+        env:
+          BZM_API_KEY: ${{ secrets.BZM_API_KEY }}
+          BZM_API_SECRET: ${{ secrets.BZM_API_SECRET }}
+          INFLUXDB_TOKEN: ${{ secrets.INFLUXDB_TOKEN }}
+        run: |
+          MASTER_ID="${{ steps.get_master_id.outputs.master_id }}"
+          echo "Exporting results for Master ID: $MASTER_ID to InfluxDB..."
+          
+          cd influxdb
+          
+          python blazemeter_influxdb_connector.py \
+            --master-id "$MASTER_ID" \
+            --influx-url "$INFLUXDB_URL" \
+            --influx-token "$INFLUXDB_TOKEN" \
+            --influx-org "$INFLUXDB_ORG" \
+            --influx-bucket "$INFLUXDB_BUCKET" \
+            --save-json "../blazemeter_results_${MASTER_ID}.json"
+          
+          echo "✅ Results exported to InfluxDB successfully!"
+
+      - name: Upload Results Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blazemeter-results-${{ steps.get_master_id.outputs.master_id }}
+          path: blazemeter_results_*.json
+          retention-days: 30
+
+      - name: Job Summary
+        run: |
+          MASTER_ID="${{ steps.get_master_id.outputs.master_id }}"
+          
+          echo "## 🚀 BlazeMeter Test Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Test ID | ${{ inputs.testId }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Project ID | ${{ inputs.projectId }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Master ID | $MASTER_ID |" >> $GITHUB_STEP_SUMMARY
+          echo "| InfluxDB | $INFLUXDB_URL |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bucket | $INFLUXDB_BUCKET |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 View Results" >> $GITHUB_STEP_SUMMARY
+          echo "- [BlazeMeter Report](https://a.blazemeter.com/app/#/masters/$MASTER_ID/summary)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Grafana Dashboard](http://192.168.29.208:3000)" >> $GITHUB_STEP_SUMMARY

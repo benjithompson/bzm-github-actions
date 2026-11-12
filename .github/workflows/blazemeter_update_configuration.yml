@@ -1,0 +1,45 @@
+# https://github.com/Blazemeter/github-action
+
+name: BlazeMeter - Update Configuration - Performance Test
+
+on:
+  # push:
+  #   branches: [ main ]
+  workflow_dispatch:
+    # inputs:
+      # testId:
+      #   description: 'The ID of the BlazeMeter test to update'
+      #   default: '14948565'
+      #   required: true
+      # projectId:
+      #   description: 'The ID of the BlazeMeter project'
+      #   default: '2507550'
+      #   required: true
+      # totalUsers:
+      #   description: 'The total number of users for the test'
+      #   default: '5'
+      #   required: true
+      # duration:
+      #   description: 'The duration of the test in minutes'
+      #   default: '10'
+      #   required: true
+      # rampUp:
+      #   description: 'The ramp-up time in minutes'
+      #   default: '240'
+      #   required: true
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: BlazeRunnerAction
+        uses: Blazemeter/github-action@v8
+        with:
+          apiKey: ${{ secrets.BZM_API_KEY }}
+          apiSecret: ${{ secrets.BZM_API_SECRET }}
+          projectId: '2509625' # CICD
+          testId: '14844314' # Github Actions - Update Load Configuration
+          totalUsers: '7'
+          duration: '7'
+          rampUp: '2'
+          continuePipeline: 'false'

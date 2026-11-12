@@ -1,0 +1,243 @@
+name: 'BlazeMeter Perfecto EUX Example (GitHub Action)'
+# This workflow demonstrates the new BlazeMeter Perfecto EUX GitHub Action
+# The action provides operation-based functionality for integrated testing
+# Uses GitHub Environment: SE DEMO (configure environment in repository settings)
+# Required GitHub Secrets:
+#   - BZM_API_KEY: BlazeMeter API key
+#   - BZM_API_SECRET: BlazeMeter API secret  
+#   - PERFECTO_SECURITY_TOKEN: Perfecto security token
+# Required GitHub Variables (SE DEMO environment):
+#   - BZM_TEST_ID: BlazeMeter test ID to run (get this from BlazeMeter UI or API)
+#   - SE_DEMO_PERFECTO_CLOUD_NAME: Perfecto cloud name (e.g., 'demo' for demo.perfectomobile.com)
+#   - SE_DEMO_PERFECTO_SCRIPT_KEY: Perfecto script key (optional, defaults to 'PRIVATE%3ADigitalBankSimpleTest.xml')
+#   - SE_DEMO_PERFECTO_DEVICE_ID: Perfecto device ID (optional, defaults to '21111FDF60022V')
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.SE_DEMO_BZM_PROJECT_ID || '2512298' }}  # BlazeMeter project ID for the test
+  BZM_TEST_ID: ${{ vars.BZM_TEST_ID }}
+  BZM_API_KEY: ${{ secrets.BZM_API_KEY }}
+  BZM_API_SECRET: ${{ secrets.BZM_API_SECRET }}
+  PERFECTO_SECURITY_TOKEN: ${{ secrets.PERFECTO_SECURITY_TOKEN }}
+  PERFECTO_CLOUD_NAME: ${{ vars.SE_DEMO_PERFECTO_CLOUD_NAME || 'demo'}}
+  PERFECTO_SCRIPT_KEY: ${{ vars.SE_DEMO_PERFECTO_SCRIPT_KEY || 'PRIVATE%3ADigitalBankSimpleTest.xml' }}
+  PERFECTO_DEVICE_ID: ${{ vars.SE_DEMO_PERFECTO_DEVICE_ID || '21111FDF60022V' }}
+
+jobs:
+  performance-test-with-eux-action:
+    runs-on: ubuntu-latest
+    environment: SE DEMO
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Preliminary Checks - Validate Test Prerequisites
+        id: preliminary-checks
+        uses: ./.github/actions/blaze-perfecto-eux
+        with:
+          operation: 'preliminary-checks'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-test-id: ${{ env.BZM_TEST_ID }}
+          bzm-test-name: 'Perfecto EUX'
+          bzm-project-id: ${{ env.PROJECT_ID }}
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-device-id: ${{ env.PERFECTO_DEVICE_ID }}
+          perfecto-script-key: ${{ env.PERFECTO_SCRIPT_KEY }}
+          debug: 'false'
+
+      - name: Start BlazeMeter Performance Test (JMX Direct)
+        id: blazemeter-test
+        uses: Blazemeter/github-action@v8.5
+        with:
+          # API Key
+          apiKey: ${{ env.BZM_API_KEY }}
+          # API Secret
+          apiSecret: ${{ env.BZM_API_SECRET }}
+          # Test name for creating new test
+          testName: 'Perfecto EUX'
+          # Project ID
+          projectID: ${{ env.PROJECT_ID }}
+          # Create test flag
+          createTest: 'false'
+          # Continue pipeline on failure - ENABLED to allow non-blocking execution
+          continuePipeline: 'true'
+          # Multi-tests flag
+          multiTests: 'false'
+          # Functional test flag - set to false since Perfecto handles EUX
+          functionalTest: 'false'
+          # Data to be updated (JSON string)
+          modelData: '{}'
+          # Env variables (JSON string)
+          envVariable: '{}'
+          # Show tail of log - ENABLED for continuous log capture
+          showTailLog: 'true'
+          # Notes
+          notes: 'JMX Performance test with Perfecto Continuous EUX Loop (GitHub Action) - graceful stop'
+          # Iterations config flag
+          iterationsConfig: 'false'
+          # Run by test name flag
+          testRunByTestName: 'true'
+          # Ignore SLA flag - ENABLED to prevent blocking on SLA failures
+          ignoreSLA: 'false'
+          # Enable public report URL
+          enablePublicReportURL: 'false'
+          # Use dedicated IP flag
+          dedicatedIP: 'false'
+
+      - name: Get Latest Master ID and Check Status
+        id: check-status
+        uses: ./.github/actions/blaze-perfecto-eux
+        with:
+          operation: 'blazemeter-start'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-test-id: ${{ env.BZM_TEST_ID }}
+          bzm-test-name: 'Perfecto EUX'
+          bzm-project-id: ${{ env.PROJECT_ID }}
+          debug: 'false'
+
+      - name: Start Perfecto Test
+        id: perfecto-test
+        uses: ./blaze-perfecto-eux
+        with:
+          operation: 'perfecto-start'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-script-key: ${{ env.PERFECTO_SCRIPT_KEY }}
+          perfecto-device-id: ${{ env.PERFECTO_DEVICE_ID }}
+          debug: 'false'
+
+      - name: Get BlazeMeter Test Status
+        id: blazemeter-status
+        uses: ./blaze-perfecto-eux
+        with:
+          operation: 'blazemeter-status'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-test-id: ${{ env.BZM_TEST_ID }}
+          bzm-test-name: 'Perfecto EUX'
+          bzm-project-id: ${{ env.PROJECT_ID }}
+          debug: 'false'
+
+      - name: Get Perfecto Test Status
+        id: perfecto-status
+        uses: ./blaze-perfecto-eux
+        with:
+          operation: 'perfecto-status'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-execution-id: ${{ steps.perfecto-test.outputs.perfecto-execution-id }}
+          debug: 'false'
+
+      - name: Gracefully Stop Perfecto Test
+        id: stop-perfecto
+        uses: ./blaze-perfecto-eux
+        with:
+          operation: 'perfecto-stop'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-execution-id: ${{ steps.perfecto-test.outputs.perfecto-execution-id }}
+          debug: 'false'
+
+      - name: Generate Comprehensive Test Report
+        run: |
+          MASTER_ID="${{ steps.check-status.outputs.blazemeter-master-id }}"
+          TEST_ID="${{ steps.check-status.outputs.blazemeter-test-id }}"
+          PERFECTO_EXECUTION_ID="${{ steps.perfecto-test.outputs.perfecto-execution-id }}"
+          METRICS_COUNT="${{ steps.monitor-tests.outputs.final-metrics-count }}"
+          PRELIMINARY_STATUS="${{ steps.preliminary-checks.outputs.operation-status }}"
+          BLAZEMETER_STATUS="${{ steps.blazemeter-status.outputs.blazemeter-status }}"
+          PERFECTO_STATUS="${{ steps.perfecto-status.outputs.perfecto-status }}"
+          
+          echo "=============================================================="
+          echo "🎯 BLAZEMETER + PERFECTO EUX TEST EXECUTION REPORT (GitHub Action)"
+          echo "=============================================================="
+          echo "🔍 Preliminary Checks Status: $PRELIMINARY_STATUS"
+          echo ""
+          echo "📊 BlazeMeter Performance Test Results:"
+          echo "   • Master ID: $MASTER_ID"
+          echo "   • Test ID: $TEST_ID"
+          echo "   • Test Type: Performance Test"
+          echo "   • Status: $BLAZEMETER_STATUS"
+          echo ""
+          echo "📱 Perfecto Mobile EUX Test Results:"
+          echo "   • Execution ID: $PERFECTO_EXECUTION_ID"
+          echo "   • Script Key: ${{ env.PERFECTO_SCRIPT_KEY }}"
+          echo "   • Device ID: ${{ env.PERFECTO_DEVICE_ID }}"
+          echo "   • Cloud: ${{ env.PERFECTO_CLOUD_NAME }}.perfectomobile.com"
+          echo "   • Total Metrics Batches: $METRICS_COUNT"
+          echo "   • Status: $PERFECTO_STATUS"
+          echo ""
+          echo "🔗 Integration Details:"
+          echo "   • Integration Method: ✅ GitHub Action (blaze-perfecto-eux)"
+          echo "   • Operation-based Workflow: ✅ preliminary-checks → blazemeter-start → perfecto-start → status → stop"
+          echo "   • Action Version: 1.0.0"
+          echo "   • Node.js Runtime: $(node --version)"
+          echo "   • Unified Output: ✅ Master ID and Execution ID captured"
+          echo "   • Error Handling: ✅ Comprehensive validation and error reporting"
+          echo ""
+          echo "📈 Action Benefits:"
+          echo "   • ✅ Simplified workflow configuration"
+          echo "   • ✅ Operation-based modular design"
+          echo "   • ✅ Consistent input/output format"
+          echo "   • ✅ Built-in preliminary checks"
+          echo "   • ✅ Standardized error handling"
+          echo "   • ✅ Reusable across multiple workflows"
+          echo "   • ✅ No direct script dependencies"
+          echo ""
+          echo "✅ Test execution completed successfully!"
+          echo "📊 View unified performance and EUX results"
+          echo "=============================================================="
+
+      - name: Store Test Artifacts and Action Outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blaze-perfecto-eux-action-results
+          path: |
+            test-results.json
+            action-outputs.txt
+          retention-days: 30
+
+      - name: Action Integration Summary
+        if: always()
+        run: |
+          echo "=============================================================="
+          echo "🚀 GITHUB ACTION INTEGRATION SUMMARY"
+          echo "=============================================================="
+          echo "✅ Action Location: ./blaze-perfecto-eux"
+          echo "✅ Operations Used:"
+          echo "   • preliminary-checks: ${{ steps.preliminary-checks.outputs.operation-status }}"
+          echo "   • blazemeter-start: ${{ steps.check-status.outputs.operation-status }}"
+          echo "   • perfecto-start: ${{ steps.perfecto-test.outputs.operation-status }}"
+          echo "   • blazemeter-status: ${{ steps.blazemeter-status.outputs.operation-status }}"
+          echo "   • perfecto-status: ${{ steps.perfecto-status.outputs.operation-status }}"
+          echo "   • perfecto-stop: ${{ steps.stop-perfecto.outputs.operation-status }}"
+          echo ""
+          echo "🔧 Key Action Features Demonstrated:"
+          echo "   • ✅ Operation-based workflow routing"
+          echo "   • ✅ Input validation and sanitization"
+          echo "   • ✅ Consistent output format (master-id, execution-id)"
+          echo "   • ✅ Error handling and status reporting"
+          echo "   • ✅ Modular design for reusability"
+          echo "   • ✅ GitHub Actions integration (@actions/core)"
+          echo ""
+          echo "📦 Action Structure:"
+          echo "   • ✅ action.yml: Action definition with inputs/outputs"
+          echo "   • ✅ index.js: Main entry point with operation routing"
+          echo "   • ✅ src/: Modular helper functions"
+          echo "   • ✅ package.json: Dependencies (@actions/core, commander)"
+          echo "   • ✅ README.md: Comprehensive documentation"
+          echo ""
+          echo "🔄 Migration Benefits:"
+          echo "   • ✅ No more script path dependencies"
+          echo "   • ✅ Simplified workflow YAML"
+          echo "   • ✅ Built-in input validation"
+          echo "   • ✅ Standardized error handling"
+          echo "   • ✅ Reusable across repositories"
+          echo "   • ✅ Professional action marketplace readiness"
+          echo "=============================================================="

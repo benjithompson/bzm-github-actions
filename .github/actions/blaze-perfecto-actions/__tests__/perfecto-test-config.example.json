@@ -1,0 +1,58 @@
+{
+  "perfectoCloud": "YOUR_PERFECTO_CLOUD_NAME",
+  "securityToken": "YOUR_PERFECTO_SECURITY_TOKEN",
+  "scriptKey": "YOUR_SCRIPT_KEY",
+  "deviceId": "YOUR_DEVICE_ID",
+  "testingValues": {
+    "executionId": "YOUR_REAL_EXECUTION_ID_FOR_TESTING",
+    "externalId": "YOUR_REAL_EXTERNAL_ID_FOR_TESTING", 
+    "description": "Real values from existing test execution for API testing without starting new tests"
+  },
+  "blazemeter": {
+    "apiKey": "YOUR_BLAZEMETER_API_KEY",
+    "apiSecret": "YOUR_BLAZEMETER_API_SECRET",
+    "testingValues": {
+      "masterId": "YOUR_REAL_BLAZEMETER_MASTER_ID_FOR_TESTING",
+      "description": "Real BlazeMeter master ID from existing test for API testing"
+    }
+  },
+  "testScenarios": {
+    "connectivity": {
+      "enabled": true,
+      "description": "Test basic connectivity to Perfecto cloud"
+    },
+    "deviceCheck": {
+      "enabled": true,
+      "description": "Test device availability check"
+    },
+    "scriptCheck": {
+      "enabled": true,
+      "description": "Test script accessibility check"
+    },
+    "testStatus": {
+      "enabled": true,
+      "description": "Test execution status retrieval"
+    },
+    "executionIdFromExternal": {
+      "enabled": true,
+      "description": "Get execution ID from external ID"
+    },
+    "executionMetrics": {
+      "enabled": true,
+      "description": "Get test execution commands/metrics"
+    },
+    "euxToBlazeMeter": {
+      "enabled": true,
+      "description": "Send EUX data to BlazeMeter"
+    },
+    "startTest": {
+      "enabled": false,
+      "description": "Start a new Perfecto test execution (disabled by default)",
+      "warning": "This will start an actual test execution and consume resources"
+    }
+  },
+  "mockPayload": {
+    "useBuiltInSample": true,
+    "customPayloadFile": "sample_perfecto_payload.json"
+  }
+}

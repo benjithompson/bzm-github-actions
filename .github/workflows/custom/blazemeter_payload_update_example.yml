@@ -1,0 +1,102 @@
+name: 'BlazeMeter Load Configuration Update Example'
+# This workflow demonstrates blazemeter-update-load-configuration operation
+#
+# REQUIRED REPOSITORY CONFIGURATION:
+# 1. Repository Secrets (Settings > Secrets and variables > Actions > Secrets):
+#    - BZM_API_KEY: Your BlazeMeter API key
+#    - BZM_API_SECRET: Your BlazeMeter API secret
+# 2. Repository Variables (Settings > Secrets and variables > Actions > Variables):
+#    - BZM_TEST_ID: Your BlazeMeter test ID
+# 3. Environment: Create an environment <ENV NAME> if it doesn't exist
+
+on:
+  workflow_dispatch:
+    inputs:
+      concurrency:
+        description: 'Number of virtual users'
+        required: true
+        default: '10'
+        type: string
+      duration:
+        description: 'Test duration (e.g., 10m, 600s)'
+        required: true
+        default: '10m'
+        type: string
+      rampup:
+        description: 'Ramp-up time (e.g., 2m, 120s)'
+        required: true
+        default: '2m'
+        type: string
+
+env:
+  PROJECT_ID: '2512298'
+  BZM_TEST_ID: ${{ vars.BZM_TEST_ID }}
+  BZM_API_KEY: ${{ secrets.BZM_API_KEY }}
+  BZM_API_SECRET: ${{ secrets.BZM_API_SECRET }}
+
+jobs:
+  update-test:
+    runs-on: ubuntu-latest
+    environment: SE DEMO
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Debug step: Check environment variables
+      - name: Debug Environment Variables
+        run: |
+          echo "=============================================================="
+          echo "🔍 DEBUGGING ENVIRONMENT VARIABLES"
+          echo "=============================================================="
+          echo "PROJECT_ID: ${{ env.PROJECT_ID }}"
+          echo "BZM_TEST_ID exists: ${{ env.BZM_TEST_ID != '' }}"
+          echo "BZM_API_KEY exists: ${{ env.BZM_API_KEY != '' }}"
+          echo "BZM_API_SECRET exists: ${{ env.BZM_API_SECRET != '' }}"
+          echo "=============================================================="
+
+      # Step 1: Update BlazeMeter test configuration
+      - name: Update BlazeMeter Load Configuration
+        id: update-config
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'blazemeter-update-load-configuration'
+          bzm-api-key: ${{ secrets.BZM_API_KEY }}
+          bzm-api-secret: ${{ secrets.BZM_API_SECRET }}
+          bzm-test-id: ${{ vars.BZM_TEST_ID }}
+          bzm-concurrency: ${{ github.event.inputs.concurrency }}
+          bzm-duration: ${{ github.event.inputs.duration }}
+          bzm-rampup: ${{ github.event.inputs.rampup }}
+          debug: 'true'
+
+      # Step 2: Validate the updated configuration
+      - name: Validate Updated Configuration
+        run: |
+          echo "=============================================================="
+          echo "🔧 BLAZEMETER LOAD CONFIGURATION UPDATE RESULTS"
+          echo "=============================================================="
+          echo "📊 Updated Test Configuration:"
+          echo "   • Test ID: ${{ steps.update-config.outputs.blazemeter-test-id }}"
+          echo "   • Concurrency: ${{ github.event.inputs.concurrency }} users"
+          echo "   • Duration: ${{ github.event.inputs.duration }}"
+          echo "   • Ramp-up: ${{ github.event.inputs.rampup }}"
+          echo ""
+          echo "📋 Execution Summary:"
+          echo "   ${{ steps.update-config.outputs.execution-summary }}"
+          echo ""
+          echo "=============================================================="
+
+      # Step 4: Display final results
+      - name: Display Test Execution Results
+        run: |
+          echo "=============================================================="
+          echo "🚀 TEST EXECUTION WITH UPDATED CONFIGURATION"
+          echo "=============================================================="
+          echo "🔧 Configuration Update:"
+          echo "   • Operation: blazemeter-update-load-configuration"
+          echo "   • Status: ${{ steps.update-config.outputs.operation-status }}"
+          echo "   • Test ID: ${{ steps.update-config.outputs.blazemeter-test-id }}"
+          echo "=============================================================="
+
+    outputs:
+      updated-test-id: ${{ steps.update-config.outputs.blazemeter-test-id }}
+      configuration: ${{ steps.update-config.outputs.execution-summary }}

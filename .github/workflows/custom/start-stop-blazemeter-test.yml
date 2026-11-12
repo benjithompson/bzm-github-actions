@@ -1,0 +1,111 @@
+name: Start and Stop BlazeMeter Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      bzm-test-id:
+        description: 'BlazeMeter Test ID'
+        required: true
+        default: '14809134'
+        type: string
+      delay-minutes:
+        description: 'Minutes to wait before stopping test'
+        required: false
+        default: 1
+        type: number
+
+jobs:
+  start-and-stop-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Start BlazeMeter Test
+      id: start-test
+      uses: ./.github/actions/blaze-perfecto-actions
+      with:
+        operation: blazemeter-start
+        bzm-api-key: ${{ secrets.BZM_API_KEY }}
+        bzm-api-secret: ${{ secrets.BZM_API_SECRET }}
+        bzm-test-id: ${{ inputs.bzm-test-id }}
+        bzm-delayed-start: 'false'
+        debug: 'true'
+    
+    - name: Display Test Start Results
+      run: |
+        echo "🎯 BlazeMeter Test Started!"
+        echo "=========================="
+        echo "📊 Master ID: ${{ steps.start-test.outputs.blazemeter-master-id }}"
+        echo "🆔 Test ID: ${{ steps.start-test.outputs.blazemeter-test-id }}"
+        echo "📈 Status: ${{ steps.start-test.outputs.blazemeter-status }}"
+        echo "📋 Summary: ${{ steps.start-test.outputs.execution-summary }}"
+        echo ""
+        echo "⏰ Will wait ${{ inputs.delay-minutes }} minute(s) before stopping..."
+        
+        # Set Master ID for next step
+        echo "BZM_MASTER_ID=${{ steps.start-test.outputs.blazemeter-master-id }}" >> $GITHUB_ENV
+    
+    - name: Wait Before Stopping
+      run: |
+        echo "⏳ Waiting ${{ inputs.delay-minutes }} minute(s) for test to run..."
+        echo "🏃 Test is running with Master ID: $BZM_MASTER_ID"
+        echo ""
+        echo "You can monitor the test at:"
+        echo "https://a.blazemeter.com/app/#/accounts/{account_id}/workspaces/{workspace_id}/projects/{project_id}/masters/$BZM_MASTER_ID/summary"
+        echo ""
+        
+        # Wait for specified minutes (convert to seconds)
+        sleep_seconds=$((60 * ${{ inputs.delay-minutes }}))
+        echo "⏰ Sleeping for ${sleep_seconds} seconds..."
+        sleep $sleep_seconds
+        
+        echo "✅ Wait period completed. Proceeding to stop test..."
+    
+    - name: Stop BlazeMeter Test
+      id: stop-test
+      uses: ./.github/actions/blaze-perfecto-actions
+      with:
+        operation: blazemeter-stop
+        bzm-api-key: ${{ secrets.BZM_API_KEY }}
+        bzm-api-secret: ${{ secrets.BZM_API_SECRET }}
+        bzm-master-id: ${{ steps.start-test.outputs.blazemeter-master-id }}
+        debug: 'true'
+    
+    - name: Display Test Stop Results
+      run: |
+        echo "🛑 BlazeMeter Test Stopped!"
+        echo "=========================="
+        echo "📊 Master ID: ${{ steps.stop-test.outputs.blazemeter-master-id }}"
+        echo "📈 Status: ${{ steps.stop-test.outputs.blazemeter-status }}"
+        echo "📋 Summary: ${{ steps.stop-test.outputs.execution-summary }}"
+        echo ""
+        echo "✅ Test lifecycle completed successfully!"
+        echo "   • Started: ${{ steps.start-test.outputs.blazemeter-status }}"
+        echo "   • Stopped: ${{ steps.stop-test.outputs.blazemeter-status }}"
+    
+    - name: Check Final Test Status
+      uses: ./.github/actions/blaze-perfecto-actions
+      with:
+        operation: blazemeter-status
+        bzm-api-key: ${{ secrets.BZM_API_KEY }}
+        bzm-api-secret: ${{ secrets.BZM_API_SECRET }}
+        bzm-master-id: ${{ steps.start-test.outputs.blazemeter-master-id }}
+        debug: 'true'
+    
+    - name: Summary
+      run: |
+        echo "📊 WORKFLOW SUMMARY"
+        echo "==================="
+        echo "🆔 Test ID: ${{ inputs.bzm-test-id }}"
+        echo "📊 Master ID: ${{ steps.start-test.outputs.blazemeter-master-id }}"
+        echo "⏰ Run Duration: ${{ inputs.delay-minutes }} minute(s)"
+        echo "🎯 Operation: Start → Wait → Stop"
+        echo ""
+        echo "This workflow demonstrated:"
+        echo "  ✅ Starting a BlazeMeter test via API"
+        echo "  ✅ Capturing the Master ID"
+        echo "  ✅ Waiting for a specified duration"
+        echo "  ✅ Stopping the test via API using the Master ID"
+        echo "  ✅ Checking final test status"

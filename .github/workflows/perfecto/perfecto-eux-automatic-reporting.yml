@@ -1,0 +1,138 @@
+name: 'Perfecto EUX with Automatic BlazeMeter Reporting'
+
+on:
+  workflow_dispatch:
+    inputs:
+      test-scenario:
+        description: 'Test scenario to run'
+        required: true
+        default: 'single-test'
+        type: choice
+        options:
+          - single-test
+          - continuous-test
+          - manual-reporting
+
+env:
+  # BlazeMeter Configuration
+  BZM_API_KEY: ${{ secrets.BZM_API_KEY }}
+  BZM_API_SECRET: ${{ secrets.BZM_API_SECRET }}
+  BZM_TEST_ID: ${{ vars.BZM_TEST_ID }}
+  BZM_PROJECT_ID: ${{ vars.BZM_PROJECT_ID }}
+  
+  # Perfecto Configuration
+  PERFECTO_CLOUD_NAME: ${{ vars.PERFECTO_CLOUD_NAME }}
+  PERFECTO_SECURITY_TOKEN: ${{ secrets.PERFECTO_SECURITY_TOKEN }}
+  PERFECTO_DEVICE_ID: ${{ vars.PERFECTO_DEVICE_ID }}
+  PERFECTO_SCRIPT_KEY: ${{ vars.PERFECTO_SCRIPT_KEY }}
+
+jobs:
+  perfecto-eux-with-blazemeter:
+    runs-on: ubuntu-latest
+    name: 'Perfecto EUX with BlazeMeter Integration'
+    
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Start BlazeMeter test
+      - name: Start BlazeMeter Test
+        id: blazemeter
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'blazemeter-start'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-test-id: ${{ env.BZM_TEST_ID }}
+          bzm-project-id: ${{ env.BZM_PROJECT_ID }}
+
+      # Step 3: Single Perfecto test with automatic EUX reporting
+      - name: Single Perfecto Test with EUX
+        if: ${{ github.event.inputs.test-scenario == 'single-test' }}
+        id: perfecto-single
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'perfecto-start'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-device-id: ${{ env.PERFECTO_DEVICE_ID }}
+          perfecto-script-key: ${{ env.PERFECTO_SCRIPT_KEY }}
+          # Automatic EUX reporting enabled (default)
+          perfecto-eux-enabled: 'true'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-master-id: ${{ steps.blazemeter.outputs.blazemeter-master-id }}
+
+      # Step 4: Continuous Perfecto tests with automatic EUX reporting
+      - name: Continuous Perfecto Tests with EUX
+        if: ${{ github.event.inputs.test-scenario == 'continuous-test' }}
+        id: perfecto-continuous
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'perfecto-continuous'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-device-id: ${{ env.PERFECTO_DEVICE_ID }}
+          perfecto-script-key: ${{ env.PERFECTO_SCRIPT_KEY }}
+          perfecto-iterations: '5'
+          # Automatic EUX reporting enabled for each iteration
+          perfecto-eux-enabled: 'true'
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-master-id: ${{ steps.blazemeter.outputs.blazemeter-master-id }}
+
+      # Step 5: Manual approach (EUX disabled, separate reporting step)
+      - name: Perfecto Test without EUX Reporting
+        if: ${{ github.event.inputs.test-scenario == 'manual-reporting' }}
+        id: perfecto-manual
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'perfecto-start'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-device-id: ${{ env.PERFECTO_DEVICE_ID }}
+          perfecto-script-key: ${{ env.PERFECTO_SCRIPT_KEY }}
+          # EUX reporting disabled
+          perfecto-eux-enabled: 'false'
+
+      # Step 6: Manual EUX reporting (only for manual scenario)
+      - name: Manual EUX Reporting to BlazeMeter
+        if: ${{ github.event.inputs.test-scenario == 'manual-reporting' }}
+        uses: ./.github/actions/blaze-perfecto-actions
+        with:
+          operation: 'perfecto-report-to-blaze-master'
+          perfecto-cloud: ${{ env.PERFECTO_CLOUD_NAME }}
+          perfecto-token: ${{ env.PERFECTO_SECURITY_TOKEN }}
+          perfecto-execution-id: ${{ steps.perfecto-manual.outputs.perfecto-execution-id }}
+          bzm-api-key: ${{ env.BZM_API_KEY }}
+          bzm-api-secret: ${{ env.BZM_API_SECRET }}
+          bzm-master-id: ${{ steps.blazemeter.outputs.blazemeter-master-id }}
+          perfecto-test-name: 'Manual EUX Reporting Test'
+
+      # Step 7: Display results
+      - name: Display Test Results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Scenario:** ${{ github.event.inputs.test-scenario }}" >> $GITHUB_STEP_SUMMARY
+          echo "**BlazeMeter Master ID:** ${{ steps.blazemeter.outputs.blazemeter-master-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ github.event.inputs.test-scenario }}" == "single-test" ]]; then
+            echo "**Single Test Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Execution ID: ${{ steps.perfecto-single.outputs.perfecto-execution-id }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Intervals Posted: ${{ steps.perfecto-single.outputs.intervals-posted }}" >> $GITHUB_STEP_SUMMARY
+            echo "- EUX Report Status: ${{ steps.perfecto-single.outputs.report-status }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.event.inputs.test-scenario }}" == "continuous-test" ]]; then
+            echo "**Continuous Test Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Intervals Posted: ${{ steps.perfecto-continuous.outputs.intervals-posted }}" >> $GITHUB_STEP_SUMMARY
+            echo "- EUX Report Status: ${{ steps.perfecto-continuous.outputs.report-status }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.event.inputs.test-scenario }}" == "manual-reporting" ]]; then
+            echo "**Manual Reporting Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Execution ID: ${{ steps.perfecto-manual.outputs.perfecto-execution-id }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Manual EUX Report Status: Available in logs" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**New EUX Feature:** ✅ Automatic EUX data reporting to BlazeMeter implemented!" >> $GITHUB_STEP_SUMMARY

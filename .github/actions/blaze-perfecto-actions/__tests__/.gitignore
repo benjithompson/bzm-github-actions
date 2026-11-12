@@ -1,0 +1,10 @@
+# Configuration files for real API testing
+# Copy example files to .local.json files and fill in your credentials
+# Local credential files should NOT be committed to version control
+
+# Local credential files (ignored)
+*.local.json
+
+# Legacy naming (also ignored for safety)
+blazemeter-test-config.json
+perfecto-test-config.json

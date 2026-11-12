@@ -1,0 +1,114 @@
+# https://github.com/Blazemeter/github-action
+#
+# Uploads the JMeter script + CSV data from JMeter/DummySampler into an existing
+# BlazeMeter test, then runs it and gates the job on the test's failure criteria.
+#
+# BlazeMeter test: "GitHub Actions - Dummy Data with Errors"
+#   test    15801335
+#   project 2512298  (Demo)
+#   ws      2194183  (Ben T)
+#   account 291446   (BlazeMeter SE Demo)
+
+name: BlazeMeter - JMeter Dummy Sampler (upload + run)
+
+on:
+  workflow_dispatch:
+    inputs:
+      totalUsers:
+        description: 'Concurrent virtual users'
+        default: '10'
+        required: true
+      duration:
+        description: 'Hold-for duration (minutes)'
+        default: '3'
+        required: true
+      rampUp:
+        description: 'Ramp-up (minutes)'
+        default: '1'
+        required: true
+  push:
+    branches:
+      - main
+      - 'perf/**'
+    paths:
+      - 'JMeter/DummySampler/**'
+      - '.github/workflows/blazemeter_jmeter_dummy_sampler.yml'
+
+env:
+  BZM_TEST_ID: '15801335'
+  BZM_PROJECT_ID: '2512298'
+  SCRIPT_DIR: JMeter/DummySampler
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The official action's file inputs only apply when it creates a test, so
+      # push the assets to the existing test explicitly via the v4 API.
+      - name: Upload JMX + CSV to BlazeMeter test
+        env:
+          BZM_API_KEY: ${{ secrets.BZM_API_KEY }}
+          BZM_API_SECRET: ${{ secrets.BZM_API_SECRET }}
+        run: |
+          set -euo pipefail
+          for f in "$SCRIPT_DIR/dummy_data_with_errors.jmx" "$SCRIPT_DIR/dummyusers.csv"; do
+            echo "Uploading $f"
+            code=$(curl -sS -o /tmp/upload.json -w '%{http_code}' \
+              -u "$BZM_API_KEY:$BZM_API_SECRET" \
+              -F "file=@${f}" \
+              "https://a.blazemeter.com/api/v4/tests/${BZM_TEST_ID}/files")
+            if [ "$code" -ge 300 ]; then
+              echo "::error::Upload of $f failed (HTTP $code)"
+              cat /tmp/upload.json
+              exit 1
+            fi
+            echo "  ok (HTTP $code)"
+          done
+
+      # Make sure the freshly uploaded JMX is the script the test executes.
+      - name: Pin main script to dummy_data_with_errors.jmx
+        env:
+          BZM_API_KEY: ${{ secrets.BZM_API_KEY }}
+          BZM_API_SECRET: ${{ secrets.BZM_API_SECRET }}
+        run: |
+          set -euo pipefail
+          curl -sS -f -X PATCH \
+            -u "$BZM_API_KEY:$BZM_API_SECRET" \
+            -H 'Content-Type: application/json' \
+            -d '{"configuration":{"filename":"dummy_data_with_errors.jmx","scriptType":"jmeter"}}' \
+            "https://a.blazemeter.com/api/v4/tests/${BZM_TEST_ID}" > /dev/null
+          echo "main script pinned"
+
+      - name: Run BlazeMeter test
+        uses: Blazemeter/github-action@v8
+        with:
+          apiKey: ${{ secrets.BZM_API_KEY }}
+          apiSecret: ${{ secrets.BZM_API_SECRET }}
+          projectID: ${{ env.BZM_PROJECT_ID }}
+          testID: ${{ env.BZM_TEST_ID }}
+          totalUsers: ${{ github.event.inputs.totalUsers || '10' }}
+          duration: ${{ github.event.inputs.duration || '3' }}
+          rampUp: ${{ github.event.inputs.rampUp || '1' }}
+          showTailLog: 'true'
+          # false => job fails when the test breaches its failure criteria
+          continuePipeline: 'false'
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### BlazeMeter run"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Test | \`${BZM_TEST_ID}\` — GitHub Actions - Dummy Data with Errors |"
+            echo "| Project | Demo (\`${BZM_PROJECT_ID}\`) |"
+            echo "| Script | \`${SCRIPT_DIR}/dummy_data_with_errors.jmx\` |"
+            echo "| Data | \`${SCRIPT_DIR}/dummyusers.csv\` |"
+            echo "| Result | ${{ job.status }} |"
+            echo ""
+            echo "Gate: error rate > 50%, avg response time > 1000 ms, or P95 > 1500 ms."
+          } >> "$GITHUB_STEP_SUMMARY"

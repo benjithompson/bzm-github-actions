@@ -1,0 +1,169 @@
+name: 'BlazeMeter Perfecto EUX Integration'
+description: 'Integrated BlazeMeter performance testing with Perfecto mobile EUX testing'
+author: 'Perforce Software'
+
+inputs:
+  # Operation control
+  operation:
+    description: 'Operation to perform: preliminary-checks, blazemeter-start, blazemeter-stop, blazemeter-status, blazemeter-update-load-configuration, perfecto-start, perfecto-stop, perfecto-status, perfecto-continuous, perfecto-report-to-blaze-master'
+    required: true
+  
+  # BlazeMeter inputs
+  bzm-api-key:
+    description: 'BlazeMeter API key'
+    required: false
+  bzm-api-secret:
+    description: 'BlazeMeter API secret'
+    required: false
+  bzm-test-id:
+    description: 'BlazeMeter test ID (optional if using test name)'
+    required: false
+  bzm-test-name:
+    description: 'BlazeMeter test name (fallback if test ID not provided)'
+    required: false
+  bzm-project-id:
+    description: 'BlazeMeter project ID'
+    required: false
+  bzm-delayed-start:
+    description: 'Whether to use delayed start for BlazeMeter test (default: false)'
+    required: false
+    default: 'false'
+  
+  # BlazeMeter load configuration update parameters
+  bzm-concurrency:
+    description: 'BlazeMeter test concurrency (number of virtual users)'
+    required: false
+  bzm-duration:
+    description: 'BlazeMeter test duration (e.g., "10m", "600s")'
+    required: false
+  bzm-rampup:
+    description: 'BlazeMeter test ramp-up time (e.g., "2m", "120s")'
+    required: false
+  
+  # Perfecto inputs
+  perfecto-cloud:
+    description: 'Perfecto cloud name (e.g., demo for demo.perfectomobile.com)'
+    required: false
+  perfecto-token:
+    description: 'Perfecto security token'
+    required: false
+  perfecto-script-key:
+    description: 'Perfecto script key (e.g., PRIVATE:MyScript.xml)'
+    required: false
+  perfecto-device-id:
+    description: 'Perfecto device ID'
+    required: false
+  perfecto-execution-id:
+    description: 'Perfecto execution ID (required for stop/status operations)'
+    required: false
+  perfecto-external-id:
+    description: 'Perfecto external ID (alternative to execution ID for reporting operations)'
+    required: false
+  perfecto-test-name:
+    description: 'Perfecto test name for BlazeMeter reporting (optional)'
+    required: false
+  perfecto-iterations:
+    description: 'Number of iterations for continuous testing (-1 for infinite)'
+    required: false
+    default: '-1'
+  perfecto-eux-enabled:
+    description: 'Enable automatic EUX data reporting to BlazeMeter after test completion'
+    required: false
+    default: 'true'
+  
+  # BlazeMeter reporting inputs
+  bzm-master-id:
+    description: 'BlazeMeter master ID for timeseries data reporting'
+    required: false
+  
+  # Additional options
+  debug:
+    description: 'Enable debug logging'
+    required: false
+    default: 'false'
+
+outputs:
+  # BlazeMeter outputs
+  blazemeter-master-id:
+    description: 'BlazeMeter master ID for the test execution'
+    value: ${{ steps.execute.outputs.blazemeter-master-id }}
+  blazemeter-test-id:
+    description: 'BlazeMeter test ID'
+    value: ${{ steps.execute.outputs.blazemeter-test-id }}
+  blazemeter-status:
+    description: 'BlazeMeter test status'
+    value: ${{ steps.execute.outputs.blazemeter-status }}
+  
+  # Perfecto outputs
+  perfecto-execution-id:
+    description: 'Perfecto execution ID for the test'
+    value: ${{ steps.execute.outputs.perfecto-execution-id }}
+  perfecto-status:
+    description: 'Perfecto test status'
+    value: ${{ steps.execute.outputs.perfecto-status }}
+  
+  # Reporting outputs
+  bzm-master-id:
+    description: 'BlazeMeter master ID used for reporting'
+    value: ${{ steps.execute.outputs.bzm-master-id }}
+  intervals-posted:
+    description: 'Number of timeseries intervals posted to BlazeMeter'
+    value: ${{ steps.execute.outputs.intervals-posted }}
+  report-status:
+    description: 'Status of the reporting operation (SUCCESS, FAILED)'
+    value: ${{ steps.execute.outputs.report-status }}
+  
+  # General outputs
+  operation-status:
+    description: 'Overall operation status (PASSED, FAILED, WARNING)'
+    value: ${{ steps.execute.outputs.operation-status }}
+  execution-summary:
+    description: 'Summary of the execution results'
+    value: ${{ steps.execute.outputs.execution-summary }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        npm install
+
+    - name: Execute operation
+      id: execute
+      shell: bash
+      env:
+        DEBUG: ${{ inputs.debug }}
+        OPERATION: ${{ inputs.operation }}
+        BZM_API_KEY: ${{ inputs.bzm-api-key }}
+        BZM_API_SECRET: ${{ inputs.bzm-api-secret }}
+        BZM_TEST_ID: ${{ inputs.bzm-test-id }}
+        BZM_TEST_NAME: ${{ inputs.bzm-test-name }}
+        BZM_PROJECT_ID: ${{ inputs.bzm-project-id }}
+        BZM_DELAYED_START: ${{ inputs.bzm-delayed-start }}
+        BZM_CONCURRENCY: ${{ inputs.bzm-concurrency }}
+        BZM_DURATION: ${{ inputs.bzm-duration }}
+        BZM_RAMPUP: ${{ inputs.bzm-rampup }}
+        PERFECTO_CLOUD: ${{ inputs.perfecto-cloud }}
+        PERFECTO_TOKEN: ${{ inputs.perfecto-token }}
+        PERFECTO_SCRIPT_KEY: ${{ inputs.perfecto-script-key }}
+        PERFECTO_DEVICE_ID: ${{ inputs.perfecto-device-id }}
+        PERFECTO_EXECUTION_ID: ${{ inputs.perfecto-execution-id }}
+        PERFECTO_EXTERNAL_ID: ${{ inputs.perfecto-external-id }}
+        PERFECTO_TEST_NAME: ${{ inputs.perfecto-test-name }}
+        PERFECTO_ITERATIONS: ${{ inputs.perfecto-iterations }}
+        PERFECTO_EUX_ENABLED: ${{ inputs.perfecto-eux-enabled }}
+        BZM_MASTER_ID: ${{ inputs.bzm-master-id }}
+      run: |
+        cd ${{ github.action_path }}
+        node index.js
+
+branding:
+  icon: 'zap'
+  color: 'blue'

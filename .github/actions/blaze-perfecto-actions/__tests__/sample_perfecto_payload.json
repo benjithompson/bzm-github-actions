@@ -1,0 +1,159 @@
+{
+  "resources": [
+    {
+      "commands": [
+        {
+          "name": "Start application",
+          "status": "SUCCESS",
+          "startTime": 1751347541370,
+          "endTime": 1751347542663,
+          "uxDuration": 1292,
+          "expectedData": [],
+          "resultData": [],
+          "screenshots": [],
+          "expectedImages": [],
+          "parameters": [
+            {
+              "name": "Device ID",
+              "value": "21111FDF60022V",
+              "attributes": []
+            },
+            {
+              "name": "Application name",
+              "value": "Banking App",
+              "attributes": []
+            }
+          ]
+        },
+        {
+          "name": "Wait for element",
+          "status": "SUCCESS",
+          "startTime": 1751347542664,
+          "endTime": 1751347543000,
+          "uxDuration": 336,
+          "expectedData": [],
+          "resultData": []
+        },
+        {
+          "name": "Timer start",
+          "status": "SUCCESS",
+          "startTime": 1751347543001,
+          "endTime": 1751347543002,
+          "uxDuration": 0,
+          "expectedData": [],
+          "resultData": []
+        },
+        {
+          "name": "Login action",
+          "status": "SUCCESS",
+          "startTime": 1751347543003,
+          "endTime": 1751347544500,
+          "uxDuration": 1497,
+          "expectedData": [],
+          "resultData": [],
+          "screenshots": [],
+          "expectedImages": [],
+          "parameters": [
+            {
+              "name": "Username",
+              "value": "testuser@example.com",
+              "attributes": []
+            }
+          ]
+        },
+        {
+          "name": "Navigate to dashboard",
+          "status": "SUCCESS",
+          "startTime": 1751347544501,
+          "endTime": 1751347545800,
+          "uxDuration": 1299,
+          "expectedData": [],
+          "resultData": []
+        },
+        {
+          "name": "Check balance",
+          "status": "SUCCESS",
+          "startTime": 1751347545801,
+          "endTime": 1751347546950,
+          "uxDuration": 1149,
+          "expectedData": [],
+          "resultData": []
+        },
+        {
+          "name": "Timer stop",
+          "status": "SUCCESS",
+          "startTime": 1751347546951,
+          "endTime": 1751347546952,
+          "uxDuration": 0,
+          "expectedData": [],
+          "resultData": []
+        },
+        {
+          "name": "Transfer money",
+          "status": "FAILURE",
+          "message": "Element not found: Transfer button",
+          "startTime": 1751347546953,
+          "endTime": 1751347548200,
+          "uxDuration": 1247,
+          "expectedData": [],
+          "resultData": [],
+          "screenshots": [
+            "https://demo.app.perfectomobile.com/download-01/report-artifact/screenshot1.jpeg"
+          ]
+        },
+        {
+          "name": "Logout",
+          "status": "SUCCESS",
+          "startTime": 1751347548201,
+          "endTime": 1751347548950,
+          "uxDuration": 749,
+          "expectedData": [],
+          "resultData": []
+        }
+      ],
+      "testExecutionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Banking App Test Flow",
+      "startTime": 1751347541370,
+      "endTime": 1751347548950
+    },
+    {
+      "commands": [
+        {
+          "name": "Device setup",
+          "status": "SUCCESS",
+          "startTime": 1751347549000,
+          "endTime": 1751347549200,
+          "uxDuration": 200,
+          "expectedData": [],
+          "resultData": []
+        },
+        {
+          "name": "Network validation",
+          "status": "SUCCESS",
+          "startTime": 1751347549201,
+          "endTime": 1751347549800,
+          "uxDuration": 599,
+          "expectedData": [],
+          "resultData": []
+        }
+      ],
+      "testExecutionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Setup Phase",
+      "startTime": 1751347549000,
+      "endTime": 1751347549800
+    }
+  ],
+  "metadata": {
+    "createdAt": 1751349370415,
+    "apiVersion": "v3",
+    "userId": "test.user@example.com",
+    "tenantId": "demo-perfectomobile-com",
+    "processingStatus": "PROCESSING_COMPLETE",
+    "testName": "Banking App Full Flow Test",
+    "deviceInfo": {
+      "deviceId": "21111FDF60022V",
+      "model": "Pixel 6",
+      "os": "Android 12"
+    }
+  }
+}

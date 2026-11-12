@@ -1,0 +1,37 @@
+{
+  "testId": "YOUR_BLAZEMETER_TEST_ID",
+  "apiKey": "YOUR_BLAZEMETER_API_KEY", 
+  "apiSecret": "YOUR_BLAZEMETER_API_SECRET",
+  "projectId": "YOUR_PROJECT_ID",
+  "testName": "YOUR_TEST_NAME",
+  "testingValues": {
+    "masterId": "YOUR_REAL_MASTER_ID_FOR_TESTING",
+    "description": "Real BlazeMeter master ID from existing test for API testing"
+  },
+  "testScenarios": [
+    {
+      "name": "Basic Load Configuration",
+      "concurrency": 10,
+      "duration": "5m",
+      "rampUp": "1m"
+    },
+    {
+      "name": "High Load Configuration",
+      "concurrency": 50,
+      "duration": "10m",
+      "rampUp": "2m"
+    },
+    {
+      "name": "Quick Test Configuration",
+      "concurrency": 5,
+      "duration": "2m",
+      "rampUp": "30s"
+    },
+    {
+      "name": "Minimal Test Configuration",
+      "concurrency": 2,
+      "duration": "1m",
+      "rampUp": "15s"
+    }
+  ]
+}
